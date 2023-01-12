@@ -217,3 +217,260 @@ DB_NAME=paperless
 DB_USER=paperless
 DB_PASSWORD=
 ------------------------------------------------------------------------------------
+Scrutiny - https://github.com/AnalogJ/scrutiny
+------------------------------------------------------------------------------------
+docker-compose.yml
+------------------------------------------------------------------------------------
+version: '3.5'
+
+services:
+  scrutiny:
+    container_name: scrutiny
+    image: ghcr.io/analogj/scrutiny:master-omnibus
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN
+    ports:
+      - "8070:8080" # webapp
+      - "8076:8086" # influxDB admin
+    volumes:
+      - /run/udev:/run/udev:ro
+      - ./config:/opt/scrutiny/config
+      - ./influxdb:/opt/scrutiny/influxdb
+    devices:
+      - "/dev/nvme0"
+      - "/dev/sdb"
+      - "/dev/nvme1"
+      - "/dev/sda"
+      - "/dev/sdn"
+      - "/dev/sdk"
+      - "/dev/sdd"
+      - "/dev/sdg"
+      - "/dev/sdf"
+      - "/dev/sdh"
+      - "/dev/sdi"
+      - "/dev/sdo"
+      - "/dev/sdj"
+      - "/dev/sdl"
+      - "/dev/sde"
+      - "/dev/sdm"
+      - "/dev/sdp"
+      - "/dev/sdq"
+------------------------------------------------------------------------------------
+collector.yaml
+------------------------------------------------------------------------------------
+# Commented Scrutiny Configuration File
+#
+# The default location for this file is /opt/scrutiny/config/collector.yaml.
+# In some cases to improve clarity default values are specified,
+# uncommented. Other example values are commented out.
+#
+# When this file is parsed by Scrutiny, all configuration file keys are
+# lowercased automatically. As such, Configuration keys are case-insensitive,
+# and should be lowercase in this file to be consistent with usage.
+
+
+######################################################################
+# Version
+#
+# version specifies the version of this configuration file schema, not
+# the scrutiny binary. There is only 1 version available at the moment
+version: 1
+
+# The host id is a label used for identifying groups of disks running on the same host
+# Primiarly used for hub/spoke deployments (can be left empty if using all-in-one image).
+host:
+  id: ""
+
+
+# This block allows you to override/customize the settings for devices detected by
+# Scrutiny via `smartctl --scan`
+# See the "--device=TYPE" section of https://linux.die.net/man/8/smartctl
+# type can be a 'string' or a 'list'
+devices:
+#  # example for forcing device type detection for a single disk
+  - device: /dev/sdh
+    type: 'sat'
+  - device: /dev/sdi
+    type: 'sat'
+  - device: /dev/sdk
+    type: 'sat'
+  - device: /dev/sdj
+    type: 'sat'
+##ones above can't be found
+  - device: /dev/sdk
+    type: 'sat'
+  - device: /dev/sdl
+    type: 'sat'
+  - device: /dev/sdm
+    type: 'sat'
+  - device: /dev/sdn
+    type: 'sat'
+  - device: /dev/sdo
+    type: 'sat'
+  - device: /dev/sdp
+    type: 'sat'
+  - device: /dev/sdq
+    type: 'sat'
+
+
+#
+#  # example to show how to ignore a specific disk/device.
+#  - device: /dev/sda
+#    ignore: true
+#
+#  # examples showing how to force smartctl to detect disks inside a raid array/virtual disk
+#  - device: /dev/bus/0
+#    type:
+#      - megaraid,14
+#      - megaraid,15
+#      - megaraid,18
+#      - megaraid,19
+#      - megaraid,20
+#      - megaraid,21
+#
+#  - device: /dev/twa0
+#    type:
+#      - 3ware,0
+#      - 3ware,1
+#      - 3ware,2
+#      - 3ware,3
+#      - 3ware,4
+#      - 3ware,5
+#
+#  # example to show how to override the smartctl command args (per device), see below for how to override these global>#  - device: /dev/sda
+#    commands:
+#      metrics_info_args: '--info --json -T permissive' # used to determine device unique ID & register device with Scr>#      metrics_smart_args: '--xall --json -T permissive' # used to retrieve smart data for each device.
+
+
+#log:
+#  file: '' #absolute or relative paths allowed, eg. web.log
+#  level: INFO
+#
+#api:
+#  endpoint: 'https://hdd.orangefarm.ca/web/dashboard'
+#  endpoint: 'http://localhost:8080/custombasepath'
+# if you need to use a custom base path (for a reverse proxy), you can add a suffix to the endpoint.
+#  See docs/TROUBLESHOOTING_REVERSE_PROXY.md for more info,
+
+# example to show how to override the smartctl command args globally
+#commands:
+#  metrics_smartctl_bin: 'smartctl' # change to provide custom `smartctl` binary path, eg. `/usr/sbin/smartctl`
+#  metrics_scan_args: '--scan --json' # used to detect devices
+#  metrics_info_args: '--info --json' # used to determine device unique ID & register device with Scrutiny
+#  metrics_smart_args: '--xall --json' # used to retrieve smart data for each device.
+
+
+######################################################################################################################### FEATURES COMING SOON
+#
+# The following commented out sections are a preview of additional configuration options that will be available soon.
+#
+########################################################################################################################
+#collect:
+#  long:
+#    enable: false
+#    command: ''
+#  short:
+#    enable: false
+#    command: ''
+------------------------------------------------------------------------------------
+scrutiny.yaml
+------------------------------------------------------------------------------------
+# Commented Scrutiny Configuration File
+#
+# The default location for this file is /opt/scrutiny/config/scrutiny.yaml.
+# In some cases to improve clarity default values are specified,
+# uncommented. Other example values are commented out.
+#
+# When this file is parsed by Scrutiny, all configuration file keys are
+# lowercased automatically. As such, Configuration keys are case-insensitive,
+# and should be lowercase in this file to be consistent with usage.
+
+
+######################################################################
+# Version
+#
+# version specifies the version of this configuration file schema, not
+# the scrutiny binary. There is only 1 version available at the moment
+version: 1
+
+web:
+  listen:
+    port: 8080
+    host: 0.0.0.0
+
+    # if you're using a reverse proxy like apache/nginx, you can override this value to serve scrutiny on a subpath.
+    # eg. http://example.com/scrutiny/* vs http://example.com:8080
+    # see docs/TROUBLESHOOTING_REVERSE_PROXY.md
+    # basepath: `/scrutiny`
+    # leave empty unless behind a path prefixed proxy
+    basepath: ''
+  database:
+    # can also set absolute path here
+    location: /opt/scrutiny/config/scrutiny.db
+  src:
+    # the location on the filesystem where scrutiny javascript + css is located
+    frontend:
+      path: /opt/scrutiny/web
+
+  # if you're running influxdb on a different host (or using a cloud-provider) you'll need to update the host & port be>  # token, org, bucket are unnecessary for a new InfluxDB installation, as Scrutiny will automatically run the InfluxDB>  # and store the information in the config file. If you 're re-using an existing influxdb installation, you'll need to>  # the `token`
+  influxdb:
+#    scheme: 'http'
+    host: 0.0.0.0
+    port: 8086
+#    token: 'my-token'
+#    org: 'my-org'
+#    bucket: 'bucket'
+    retention_policy: true
+
+log:
+  file: '' #absolute or relative paths allowed, eg. web.log
+  level: INFO
+
+
+# Notification "urls" look like the following. For more information about service specific configuration see
+# Shoutrrr's documentation: https://containrrr.dev/shoutrrr/services/overview/
+
+#notify:
+#  urls:
+#    - "discord://token@channel"
+#    - "telegram://token@telegram?channels=channel-1[,channel-2,...]"
+#    - "pushover://shoutrrr:apiToken@userKey/?priority=1&devices=device1[,device2, ...]"
+#    - "slack://[botname@]token-a/token-b/token-c"
+#    - "smtp://username:password@host:port/?fromAddress=fromAddress&toAddresses=recipient1[,recipient2,...]"
+#    - "teams://token-a/token-b/token-c"
+#    - "gotify://gotify-host/token"
+#    - "pushbullet://api-token[/device/#channel/email]"
+#    - "ifttt://key/?events=event1[,event2,...]&value1=value1&value2=value2&value3=value3"
+#    - "mattermost://[username@]mattermost-host/token[/channel]"
+#    - "hangouts://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz"
+#    - "zulip://bot-mail:bot-key@zulip-domain/?stream=name-or-id&topic=name"
+#    - "join://shoutrrr:api-key@join/?devices=device1[,device2, ...][&icon=icon][&title=title]"
+#    - "script:///file/path/on/disk"
+#    - "https://www.example.com/path"
+
+######################################################################################################################### FEATURES COMING SOON
+#
+# The following commented out sections are a preview of additional configuration options that will be available soon.
+#
+########################################################################################################################
+#limits:
+#  ata:
+#    critical:
+#      error: 10
+#    standard:
+#      error: 20
+#      warn: 10
+#  scsi:
+#    critical: true
+#    standard: true
+#  nvme:
+#    critical: true
+#    standard: true
+------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------
