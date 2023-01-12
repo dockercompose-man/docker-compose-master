@@ -92,6 +92,7 @@ DB_USER=
 DB_PASSWORD=
 ------------------------------------------------------------------------------------
 Paperless-ngx - https://github.com/paperless-ngx/paperless-ngx
+When it's running 'docker compose run --rm webserver createsuperuser' to create a user.
 ------------------------------------------------------------------------------------
 docker-compose.yml
 ------------------------------------------------------------------------------------
@@ -135,14 +136,20 @@ services:
     volumes:
       - "./redisdata:/data"
   db:
-    image: docker.io/library/postgres:13
+    image: docker.io/library/mariadb:10
     restart: unless-stopped
     volumes:
-      - "./pgdata:/var/lib/postgresql/data"
+      - "./dbdata:/var/lib/mysql"
     environment:
-      POSTGRES_DB: "${DB_NAME}"
-      POSTGRES_USER: "${DB_USER}"
-      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      MARIADB_HOST: ${DB_HOST}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    env_file:
+      - .env
+    ports:
+      - 3336:3306
   webserver:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     restart: unless-stopped
@@ -166,7 +173,11 @@ services:
     env_file: .env
     environment:
       PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBENGINE: mariadb
       PAPERLESS_DBHOST: db
+      PAPERLESS_DBUSER: ${DB_USER}
+      PAPERLESS_DBPASS: ${DB_PASSWORD}
+      PAPERLESS_DBPORT: 3306
       PAPERLESS_TIKA_ENABLED: 1
       PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
       PAPERLESS_TIKA_ENDPOINT: http://tika:9998
@@ -180,7 +191,6 @@ services:
       - "gotenberg"
       - "--chromium-disable-javascript=true"
       - "--chromium-allow-list=file:///tmp/.*"
-
   tika:
     image: ghcr.io/paperless-ngx/tika:latest
     restart: unless-stopped
@@ -188,19 +198,20 @@ services:
 volumes:
   data:
   media:
-  pgdata:
+  dbdata:
   redisdata:
 ------------------------------------------------------------------------------------
 .env
 ------------------------------------------------------------------------------------
-COMPOSE_PROJECT_NAME=paperless
+NAME=paperless
 PAPERLESS_URL=https://paperless.yourdomain.com
-PAPERLESS_ALLOWED_HOSTS=*
+#PAPERLESS_ALLOWED_HOSTS=*
 USERMAP_GID=1001
 PAPERLESS_TIME_ZONE=America/New_York
 PAPERLESS_OCR_LANGUAGE=eng
 PAPERLESS_SECRET_KEY=
 ALLOWED_HOSTS=localmachine_ip
+DB_HOST=localmachine_ip
 DB_ROOT_PASSWORD=
 DB_NAME=paperless
 DB_USER=paperless
