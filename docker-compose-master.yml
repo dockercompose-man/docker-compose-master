@@ -169,7 +169,7 @@ services:
       - "./data:/usr/src/paperless/data"
       - "./media:/usr/src/paperless/media"
       - "./export:/usr/src/paperless/export"
-      - "./media/paperless/consume:/usr/src/paperless/consume"
+      - "/media/paperless/consume:/usr/src/paperless/consume"
     env_file: .env
     environment:
       PAPERLESS_REDIS: redis://broker:6379
