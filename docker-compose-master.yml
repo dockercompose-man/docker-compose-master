@@ -149,7 +149,7 @@ services:
     env_file:
       - .env
     ports:
-      - 3336:3306
+      - 3306:3306
   webserver:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     restart: unless-stopped
@@ -159,7 +159,7 @@ services:
       - gotenberg
       - tika
     ports:
-      - 8181:8000
+      - 8000:8000
     healthcheck:
       test: ["CMD", "curl", "-fs", "-S", "--max-time", "2", "http://localhost:8000"]
       interval: 30s
@@ -232,8 +232,8 @@ services:
       - SYS_RAWIO
       - SYS_ADMIN
     ports:
-      - "8070:8080" # webapp
-      - "8076:8086" # influxDB admin
+      - "8080:8080" # webapp
+      - "8086:8086" # influxDB admin
     volumes:
       - /run/udev:/run/udev:ro
       - ./config:/opt/scrutiny/config
