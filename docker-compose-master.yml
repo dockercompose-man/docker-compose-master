@@ -218,6 +218,7 @@ DB_USER=paperless
 DB_PASSWORD=
 ------------------------------------------------------------------------------------
 Scrutiny - https://github.com/AnalogJ/scrutiny
+use to scan for drives and get proper name 'smartctl --scan'
 ------------------------------------------------------------------------------------
 docker-compose.yml
 ------------------------------------------------------------------------------------
