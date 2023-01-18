@@ -49,11 +49,11 @@ access_control:
   rules:
     ## bypass rule
     - domain:
-        - "auth.orangefarm.ca" #This should be your authentication URL
+        - "auth.yourdomain.com" #This should be your authentication URL
       policy: bypass
-    - domain: "orangefarm.ca" #example domain to protect
+    - domain: "yourdomain.com" #example domain to protect
       policy: one_factor
-    - domain: "vault.orangefarm.ca" #example subdomain to protect
+    - domain: "subdomain.yourdomain.com" #example subdomain to protect
       policy: one_factor
 
 #    - domain: "sub2.yourdomain.com" #example subdomain to protect
