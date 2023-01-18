@@ -10,3 +10,20 @@ services:
       - 9091:9091
     environment:
       - TZ=America/New York
+    env_file:
+      - .env
+    links:
+      - mysql
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    volumes:
+      - /home/username/.authelia/Configs/mysql/data:/var/lib/mysql
+      - /home/username/.authelia/Configs/mysql/conf:/etc/mysql/conf.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "3306:3306"
