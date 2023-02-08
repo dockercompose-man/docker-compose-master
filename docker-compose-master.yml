@@ -967,6 +967,225 @@ services:
       - SENDS_ALLOWED=true
       - WEB_VAULT_ENABLED=true
 ------------------------------------------------------------------------------------
+PhpmyLDAPadmin - https://hub.docker.com/r/dwimberger/ldap-ad-it/ - https://github.com/intoolswetrust/ldap-server
+turned into docker compose with help of ChatGPT
+------------------------------------------------------------------------------------
+version: '3'
+services:
+  ldap-service:
+    image: osixia/openldap:1.1.8
+    hostname: ldap-service
+    environment:
+      LDAP_ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    networks:
+      ldap_network:
+        aliases:
+          - ldap-host
+
+  phpldapadmin-service:
+    image: osixia/phpldapadmin
+    hostname: phpldapadmin-service
+    ports:
+      - "443:443" #change to whatever you like
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: ldap-host
+      PHPLDAPADMIN_HTTPS: "true"
+      PHPLDAPADMIN_LDAP_BASE: "dc=orangefarm,dc=ca"
+      PHPLDAPADMIN_LDAP_BIND_DN: "cn=admin,dc=example,dc=org"
+      PHPLDAPADMIN_LDAP_BIND_PASSWORD: ${ADMIN_PASSWORD}
+    networks:
+      ldap_network:
+        aliases:
+          - ldap-host
+
+networks:
+  ldap_network:
+    driver: bridge
+------------------------------------------------------------------------------------
+.env
+------------------------------------------------------------------------------------
+ADMIN_PASSWORD=youradminpassword
+------------------------------------------------------------------------------------
+Fail2ban - https://dbt3ch.com/books/fail2ban/page/how-to-install-and-configure-fail2ban-to-work-with-nginx-proxy-manager
+https://www.youtube.com/watch?v=Ha8NIAOsNvo
+------------------------------------------------------------------------------------
+docker-compose.yml
+------------------------------------------------------------------------------------
+version: "3.7"
+services:
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban_docker-pi
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - "/home/docker/fail2ban/data:/data"
+      - "/var/log/auth.log:/var/log/auth.log:ro"
+      - "/home/docker/nginx-proxy-manager/data/logs/:/log/npm/:ro"
+    restart: always
+    environment:
+	  - TZ=Europe/Paris
+	  - F2B_LOG_TARGET=STDOUT
+	  - F2B_LOG_LEVEL=INFO
+	  - F2B_DB_PURGE_AGE=1d
+	  - SSMTP_HOST=smtp.example.com
+	  - SSMTP_PORT=587
+	  - SSMTP_HOSTNAME=example.com
+	  - SSMTP_USER=smtp@example.com
+	  - SSMTP_PASSWORD=
+	  - SSMTP_TLS=YES
+------------------------------------------------------------------------------------
+You're going to create 3 files:
+
+    /home/docker/fail2ban/data/filter.d/npm-docker.conf
+    /home/docker/fail2ban/data/jail.d/npm-docker.local
+    /home/docker/fail2ban/data/action.d/cloudflare-apiv4.conf
+------------------------------------------------------------------------------------
+npm-docker.conf
+------------------------------------------------------------------------------------
+[INCLUDES]
+
+[Definition]
+
+failregex = ^<HOST>.+" (4\d\d|3\d\d) (\d\d\d|\d) .+$
+            ^.+ 4\d\d \d\d\d - .+ \[Client <HOST>\] \[Length .+\] ".+" .+$
+------------------------------------------------------------------------------------
+npm-docker.local
+------------------------------------------------------------------------------------
+[npm-docker]
+enabled = true
+ignoreip = 127.0.0.1/8 192.168.1.0/24 your.home.ip.address
+action = cloudflare-apiv4
+chain = INPUT
+logpath = /log/npm/default-host_access.log
+          /log/npm/proxy-host-*_access.log
+          /log/npm/proxy-host-*_error.log
+maxretry = 1
+bantime  = -1
+findtime = 86400
+------------------------------------------------------------------------------------
+Modify the 192.168.1.0/24 to match your network.
+------------------------------------------------------------------------------------
+cloudflare-apiv4.conf
+------------------------------------------------------------------------------------
+#
+# Author: Gilbn from https://technicalramblings.com
+# Adapted Source: https://github.com/fail2ban/fail2ban/blob/master/config/action.d/cloudflare.conf and https://guides.wp-bullet.com/integrate-fail2ban-cloudflare-api-v4-guide/
+#
+# To get your Cloudflare API key: https://dash.cloudflare.com/profile use the Global API Key
+#
+
+[Definition]
+
+# Option:  actionstart
+# Notes.:  command executed once at the start of Fail2Ban.
+# Values:  CMD
+#
+actionstart =
+
+# Option:  actionstop
+# Notes.:  command executed once at the end of Fail2Ban
+# Values:  CMD
+#
+actionstop =
+
+# Option:  actioncheck
+# Notes.:  command executed once before each actionban command
+# Values:  CMD
+#
+actioncheck =
+
+# Option:  actionban
+# Notes.:  command executed when banning an IP. Take care that the
+#          command is executed with Fail2Ban user rights.
+# Tags:      IP address
+#            number of failures
+#            unix timestamp of the ban time
+# Values:  CMD
+
+actionban = curl -s -X POST "https://api.cloudflare.com/client/v4/user/firewall/access_rules/rules" \
+            -H "X-Auth-Email: <cfuser>" \
+            -H "X-Auth-Key: <cftoken>" \
+            -H "Content-Type: application/json" \
+            --data '{"mode":"block","configuration":{"target":"ip","value":"<ip>"},"notes":"Fail2ban <name>"}'
+
+# Option:  actionunban
+# Notes.:  command executed when unbanning an IP. Take care that the
+#          command is executed with Fail2Ban user rights.
+# Tags:      IP address
+#            number of failures
+#            unix timestamp of the ban time
+# Values:  CMD
+#
+
+actionunban = curl -s -X DELETE "https://api.cloudflare.com/client/v4/user/firewall/access_rules/rules/$( \
+              curl -s -X GET "https://api.cloudflare.com/client/v4/user/firewall/access_rules/rules?mode=block&configuration_target=ip&configuration_value=<ip>&page=1&per_page=1&match=all" \
+             -H "X-Auth-Email: <cfuser>" \
+             -H "X-Auth-Key: <cftoken>" \
+             -H "Content-Type: application/json" | awk -F"[,:}]" '{for(i=1;i<=NF;i++){if($i~/'id'\042/){print $(i+1);}}}' | tr -d '"' | sed -e 's/^[ \t]*//' | head -n 1)" \
+             -H "X-Auth-Email: <cfuser>" \
+             -H "X-Auth-Key: <cftoken>" \
+             -H "Content-Type: application/json"
+
+[Init]
+
+# Name of the jail in your jail.local file. default = [jail name]
+name = npm-docker
+
+# Option: cfuser
+# Notes.: Replaces <cfuser> in actionban and actionunban with cfuser value below
+# Values: Your CloudFlare user account
+
+cfuser = davidnburgess@gmail.com
+
+# Option: cftoken (Global API Key)
+# Notes.: Replaces <cftoken> in actionban and actionunban with cftoken value below
+# Values: Your CloudFlare API key
+cftoken = 1234567890abcdefghijklmnop
+------------------------------------------------------------------------------------
+docker inspect $(docker ps -qa) | jq -r 'map([.Name, .GraphDriver.Data.MergedDir]) | .[] | "\(.[0])\t\(.[1])"'
+------------------------------------------------------------------------------------
+sudo nano /var/lib/docker/overlay2/793d7fa22cb7d1e29fa36ec6701d318f5b2320dfa592edf3972798e93fbc48c1/merged/etc/nginx/nginx.conf
+------------------------------------------------------------------------------------
+		#CF IPs
+        set_real_ip_from 103.21.244.0/22;
+        set_real_ip_from 103.22.200.0/22;
+        set_real_ip_from 103.31.4.0/22;
+        set_real_ip_from 104.16.0.0/12;
+        set_real_ip_from 108.162.192.0/18;
+        set_real_ip_from 131.0.72.0/22;
+        set_real_ip_from 141.101.64.0/18;
+        set_real_ip_from 162.158.0.0/15;
+        set_real_ip_from 172.64.0.0/13;
+        set_real_ip_from 173.245.48.0/20;
+        set_real_ip_from 188.114.96.0/20;
+        set_real_ip_from 190.93.240.0/20;
+        set_real_ip_from 197.234.240.0/22;
+        set_real_ip_from 198.41.128.0/17;
+        set_real_ip_from 2400:cb00::/32;
+        set_real_ip_from 2606:4700::/32;
+        set_real_ip_from 2803:f800::/32;
+        set_real_ip_from 2405:b500::/32;
+        set_real_ip_from 2405:8100::/32;
+        set_real_ip_from 2c0f:f248::/32;
+        set_real_ip_from 2a06:98c0::/29;
+
+        real_ip_header X-Forwarded-For;
+------------------------------------------------------------------------------------
+chmod 604 nginx.conf and restart the container
 ------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+
+
 
