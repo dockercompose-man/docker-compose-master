@@ -967,44 +967,54 @@ services:
       - SENDS_ALLOWED=true
       - WEB_VAULT_ENABLED=true
 ------------------------------------------------------------------------------------
-PhpmyLDAPadmin - https://hub.docker.com/r/dwimberger/ldap-ad-it/ - https://github.com/intoolswetrust/ldap-server
-turned into docker compose with help of ChatGPT
+PhpmyLDAPadmin - https://github.com/Ramhm/openldap - https://www.youtube.com/watch?v=PGL1D_Lv2FU
 ------------------------------------------------------------------------------------
-version: '3'
+version: '3.7'
 services:
-  ldap-service:
-    image: osixia/openldap:1.1.8
-    hostname: ldap-service
-    environment:
-      LDAP_ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-    networks:
-      ldap_network:
-        aliases:
-          - ldap-host
-
-  phpldapadmin-service:
-    image: osixia/phpldapadmin
-    hostname: phpldapadmin-service
+  openldap:
+    image: osixia/openldap:latest
+    container_name: openldap
+    hostname: openldap
     ports:
-      - "443:443" #change to whatever you like
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ./data/certificates:/container/service/slapd/assets/certs
+      - ./data/slapd/database:/var/lib/ldap
+      - ./data/slapd/config:/etc/ldap/slapd.d
     environment:
-      PHPLDAPADMIN_LDAP_HOSTS: ldap-host
-      PHPLDAPADMIN_HTTPS: "true"
-      PHPLDAPADMIN_LDAP_BASE: "dc=example,dc=ca"
-      PHPLDAPADMIN_LDAP_BIND_DN: "cn=admin,dc=example,dc=org"
-      PHPLDAPADMIN_LDAP_BIND_PASSWORD: ${ADMIN_PASSWORD}
+      - LDAP_ORGANISATION=orangefarm
+      - LDAP_DOMAIN=orangefarm.ca
+      - LDAP_ADMIN_USERNAME=admin
+      - LDAP_ADMIN_PASSWORD=youradminpassword
+      - LDAP_CONFIG_PASSWORD=yourconfigpassword
+      - "LDAP_BASE_DN=dc=domainname,dc=com"
+      - LDAP_TLS_CRT_FILENAME=domainname.com.crt
+      - LDAP_TLS_KEY_FILENAME=domainname.com.key
+      - LDAP_TLS_CA_CRT_FILENAME=domainname.com.ca.crt
+      - LDAP_READONLY_USER=true
+      - LDAP_READONLY_USER_USERNAME=user-ro
+      - LDAP_READONLY_USER_PASSWORD=ro_password #change
     networks:
-      ldap_network:
-        aliases:
-          - ldap-host
+      - openldap
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:latest
+    container_name: phpldapadmin
+    hostname: phpldapadmin
+    ports:
+      - "80:80"
+    environment:
+      - PHPLDAPADMIN_LDAP_HOSTS=openldap
+      - PHPLDAPADMIN_HTTPS=false
+    depends_on:
+      - openldap
+    networks:
+      - openldap
 
 networks:
-  ldap_network:
+  openldap:
     driver: bridge
-------------------------------------------------------------------------------------
-.env
-------------------------------------------------------------------------------------
-ADMIN_PASSWORD=youradminpassword
 ------------------------------------------------------------------------------------
 Fail2ban - https://dbt3ch.com/books/fail2ban/page/how-to-install-and-configure-fail2ban-to-work-with-nginx-proxy-manager
 https://www.youtube.com/watch?v=Ha8NIAOsNvo
