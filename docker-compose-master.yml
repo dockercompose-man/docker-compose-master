@@ -990,7 +990,7 @@ services:
     environment:
       PHPLDAPADMIN_LDAP_HOSTS: ldap-host
       PHPLDAPADMIN_HTTPS: "true"
-      PHPLDAPADMIN_LDAP_BASE: "dc=orangefarm,dc=ca"
+      PHPLDAPADMIN_LDAP_BASE: "dc=example,dc=ca"
       PHPLDAPADMIN_LDAP_BIND_DN: "cn=admin,dc=example,dc=org"
       PHPLDAPADMIN_LDAP_BIND_PASSWORD: ${ADMIN_PASSWORD}
     networks:
