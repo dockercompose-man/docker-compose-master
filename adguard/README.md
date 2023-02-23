@@ -1,0 +1,1 @@
+https://hub.docker.com/r/adguard/adguardhome - https://www.llewellynhughes.co.uk/post/installing-adguard-compose/
